@@ -6,12 +6,12 @@
 
 <!-- Create a div where the graph will take place -->
 <div id="my_dataviz"></div>
-
+<div id="legend"></div>
 <script>
 
 // set the dimensions and margins of the graph
-var margin = {top: 10, right: 30, bottom: 30, left: 60},
-    width = 460 - margin.left - margin.right,
+var margin = {top: 30, right: 150, bottom: 30, left: 60},
+    width = 580 - margin.left - margin.right,
     height = 400 - margin.top - margin.bottom;
 
 // append the svg object to the body of the page
@@ -24,7 +24,6 @@ var svg = d3.select("#my_dataviz")
           "translate(" + margin.left + "," + margin.top + ")");
 
 //Read the data
-//d3.csv("https://raw.githubusercontent.com/holtzy/data_to_viz/master/Example_dataset/3_TwoNumOrdered_comma.csv",
 data = d3.csv("https://raw.githubusercontent.com/chunzhu/cs5346_project1/main/government-overall-fiscal-position.csv",
     (data) => {
         return {
@@ -88,7 +87,7 @@ data = d3.csv("https://raw.githubusercontent.com/chunzhu/cs5346_project1/main/go
                                                                                                             
 
         })
-        //d3.timeParse("%Y%m")("19976")
+
 
         total_expenditure_and_revenue_and_intersect_per_year_list = total_expenditure_and_revenue_per_year_list.reduce( (acc,data,index) =>{
             if (index > 0) {
@@ -98,46 +97,20 @@ data = d3.csv("https://raw.githubusercontent.com/chunzhu/cs5346_project1/main/go
                     
                     new_data = {
                         'year' : d3.timeParse("%Y%m")(prev_data.year.getFullYear().toString() + 6),
-                        //'revenue' : (current_data.revenue + prev_data.revenue)/2,
-                        //'revenue' : current_data.revenue ,
                         'revenue' : (current_data.revenue + prev_data.revenue + current_data.expenditure + prev_data.expenditure)/4,
-                        //'expenditure': (current_data.expenditure + prev_data.expenditure)/2,
-                        //'expenditure': current_data.expenditure ,
                         'expenditure': (current_data.revenue + prev_data.revenue + current_data.expenditure + prev_data.expenditure)/4,
                         'revenueAbove': !(current_data.revenueAbove),
                         'pointType' : 'mid'
                     }
                     new_data1 = {
                         'year' : d3.timeParse("%Y%m")(prev_data.year.getFullYear().toString() + 6),
-                        //'revenue' : (current_data.revenue + prev_data.revenue)/2,
-                        //'revenue' : current_data.revenue ,
                         'revenue' : (current_data.revenue + prev_data.revenue + current_data.expenditure + prev_data.expenditure)/4,
-                        //'expenditure': (current_data.expenditure + prev_data.expenditure)/2,
-                        //'expenditure': current_data.expenditure,
                         'expenditure': (current_data.revenue + prev_data.revenue + current_data.expenditure + prev_data.expenditure)/4,
                         'revenueAbove': (current_data.revenueAbove),
                         'pointType' : 'mid'
                     }
                     acc.push(new_data)
                     acc.push(new_data1)
-                    /*
-                    new_data = {
-                        'year' : current_data.year,
-                        'revenue' : current_data.revenue,
-                        'expenditure' : current_data.expenditure,
-                        'revenueAbove': !(current_data.revenueAbove),
-                        'pointType' : 'mid'
-                    }
-                    new_data1 = {
-                        'year' : current_data.year,
-                        'revenue' : current_data.revenue,
-                        'expenditure' : current_data.expenditure,
-                        'revenueAbove': (current_data.revenueAbove),
-                        'pointType' : 'mid'
-                    }
-                    acc.push(new_data)
-                    acc.push(new_data1)
-                    */
                 }
             }
             acc.push(data)
@@ -156,48 +129,66 @@ data = d3.csv("https://raw.githubusercontent.com/chunzhu/cs5346_project1/main/go
         console.log(total_expenditure_and_revenue_per_year_list)
         console.log(total_expenditure_and_revenue_and_intersect_per_year_list)
 
+        
         var x = d3.scaleTime()
-            //.domain(d3.extent(rows, function(d) { return d3.timeParse("%Y")(d.financial_year); }))
             .domain(d3.extent(years, function(d) { return d3.timeParse("%Y%m")(d+1); }))
             .range([ 0, width ]);
-        svg.append("g")
-            .attr("transform", "translate(0," + height + ")")
-            .call(d3.axisBottom(x));
+
 
                 // Add Y axis
+        lower_margin_multiplier = 0.8
+        upper_margin_multiplier = 1.1
         var y = d3.scaleLinear()
-            .domain([0, d3.max(total_values_list, function(amount) { return +amount; })])
+            .domain([d3.min(total_values_list, function(amount) { return +amount; })*lower_margin_multiplier, d3.max(total_values_list, function(amount) { return +amount; })*upper_margin_multiplier])
             .range([ height, 0 ]);
-        svg.append("g")
-            .call(d3.axisLeft(y));
+
 
 
         c = d3.curveBasis
-        //c = d3.curveMonotoneX
-        result = total_expenditure_and_revenue_and_intersect_per_year_list.filter(data => data.revenueAbove)
+
+        // revenue area above
         svg.append("path")
         .datum(total_expenditure_and_revenue_and_intersect_per_year_list)
-        //.datum(result)
+        .attr("fill", "lightgreen")
+        .attr("stroke-width", 0)
+        .attr("d", d3.area()
+            .x((d) => { return x(d.year) })
+            .y0(height)
+            .y1((d) => { return y(d.revenue) })
+            .defined((d) => (d.revenueAbove))
+            .curve(c)
+        )
+        // expenditure area below as a mask layer
+        svg.append("path")
+        .datum(total_expenditure_and_revenue_and_intersect_per_year_list)
+        .attr("fill", "white")
+        .attr("stroke-width", 0)
+        .attr("d", d3.area()
+            .x((d) => { return x(d.year) })
+            .y0(height)
+            .y1((d) => { return y(d.expenditure) })
+            .defined((d) => (d.revenueAbove))
+            .curve(c)
+        )        
 
+        // revenue line above
+        svg.append("path")
+        .datum(total_expenditure_and_revenue_and_intersect_per_year_list)
         .attr("fill", "none")
-        //.attr("class", "area")
-        .attr("stroke", "steelblue")
+        .attr("stroke", "green")
         .attr("stroke-width", 1.5)
         .attr("d", d3.line()
             .x((d) => { return x(d.year) })
             .y((d) => { return y(d.revenue) })
-            //.defined((d) => d.revenueAbove == undefined || !(d.revenueAbove))
             .defined((d) => d.revenueAbove)
-            //.curve(d3.curveBasis)
             .curve(c)
         )
 
+        // expenditure below
         svg.append("path")
         .datum(total_expenditure_and_revenue_and_intersect_per_year_list)
-        //.datum(result)
-
         .attr("fill", "none")
-        .attr("stroke", "green")
+        .attr("stroke", "red")
         .attr("stroke-width", 1.5)
         .attr("d", d3.line()
             .x((d) => { return x(d.year) })
@@ -207,15 +198,39 @@ data = d3.csv("https://raw.githubusercontent.com/chunzhu/cs5346_project1/main/go
             //.curve(d3.curveBasis)
             .curve(c)
         )
-
+        
 
         result = total_expenditure_and_revenue_and_intersect_per_year_list.filter(data => !(data.revenueAbove))
+        // expenditure area above
         svg.append("path")
         .datum(total_expenditure_and_revenue_and_intersect_per_year_list)
-        //.datum(result)
+        .attr("fill", "pink")
+        .attr("stroke-width", 0)
+        .attr("d", d3.area()
+            .x((d) => { return x(d.year) })
+            .y0(height)
+            .y1((d) => { return y(d.expenditure) })
+            .defined((d) => !(d.revenueAbove))
+            .curve(c)
+        )
 
+        // revenue area below as a mask layer
+        svg.append("path")
+        .datum(total_expenditure_and_revenue_and_intersect_per_year_list)
+        .attr("fill", "white")
+        .attr("stroke-width", 0)
+        .attr("d", d3.area()
+            .x((d) => { return x(d.year) })
+            .y0(height)
+            .y1((d) => { return y(d.revenue) })
+            .defined((d) => !(d.revenueAbove))
+            .curve(c)
+        )
+
+        svg.append("path")
+        .datum(total_expenditure_and_revenue_and_intersect_per_year_list)
         .attr("fill", "none")
-        .attr("stroke", "red")
+        .attr("stroke", "green")
         .attr("stroke-width", 1.5)
         .attr("d", d3.line()
             .x((d) => { return x(d.year) })
@@ -225,25 +240,82 @@ data = d3.csv("https://raw.githubusercontent.com/chunzhu/cs5346_project1/main/go
             //.curve(d3.curveBasis)
             .curve(c)
         )
-
+        // expenditure below
         svg.append("path")
         .datum(total_expenditure_and_revenue_and_intersect_per_year_list)
-        //.datum(result)
-
         .attr("fill", "none")
-        .attr("stroke", "purple")
+        .attr("stroke", "red")
         .attr("stroke-width", 1.5)
         .attr("d", d3.line()
             .x((d) => { return x(d.year) })
             .y((d) => { return y(d.expenditure) })
-            //.defined((d) => d.revenueAbove == undefined || (d.revenueAbove))
             .defined((d) => !(d.revenueAbove))
-            //.curve(d3.curveBasis)
             .curve(c)
         )
 
+        // add axis to graph
+        svg.append("g")
+            .attr("transform", "translate(0," + height + ")")
+            .call(d3.axisBottom(x).tickSize(-1 * height))
+            .call(g => g.selectAll(".tick line")
+            .attr("stroke-opacity", 0.2)
+            .attr("stroke-dasharray", "1,2"));    
+        
+        svg.append("g")
+            .call(d3.axisLeft(y).tickSize(-1 * width))
+            .call(g => g.selectAll(".tick line")
+            .attr("stroke-opacity", 0.2)
+            .attr("stroke-dasharray", "1,2"));   
+        // add title to graph
+        svg.append("text")
+        .attr("x", (width / 2))             
+        .attr("y", 0 - (margin.top / 2))
+        .attr("text-anchor", "middle")  
+        .style("font-size", "16px") 
+        .style("text-decoration", "underline")  
+        .text("Singapore Budget Surplus/(Deficit) 1997 - 2022");
+
+        //Initialize legend
+        legend_data = [
+            {"name":"Total Revenue (Line)" ,"color":"green"},
+            {"name":"Total Expenditure (Line)" ,"color":"red"},
+            {"name":"Budget Surplus (Area)" ,"color":"lightgreen"},
+            {"name":"Budget Deficit (Area)" ,"color":"pink"},
+        ]
+
+        var legendItemSize = 12;
+        var legendSpacing = 4;
+        var xOffset = width + legendItemSize;
+        var yOffset = margin.top
+        
+        var legend = svg
+            .selectAll('.legendItem')
+            .data(legend_data);
+        
+        //Create legend items
+        legend
+        .enter()
+        .append('rect')
+        .attr('class', 'legendItem')
+        .attr('width', legendItemSize)
+        .attr('height', legendItemSize)
+        .style('fill', d => d.color)
+        .attr('transform',
+                        (d, i) => {
+                            var x = xOffset;
+                            var y = yOffset + (legendItemSize + legendSpacing) * i;
+                            return `translate(${x}, ${y})`;
+                        });
+
+        //Create legend labels
+        legend
+        .enter()
+        .append('text')
+        .attr('x', xOffset + legendItemSize + 5)
+        .attr('y', (d, i) => yOffset + (legendItemSize + legendSpacing) * i + 12)
+        .text(d => d.name) 
+        .attr("font-size", 10);
+        
     })
-
-
 
 </script>
