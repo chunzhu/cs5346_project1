@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+
+<!-- Load d3.js -->
+<script src="https://d3js.org/d3.v4.js"></script>
+
+<!-- Create a div where the graph will take place -->
+<div id="my_dataviz"></div>
+
+<script>
+
+// set the dimensions and margins of the graph
+var margin = {top: 10, right: 30, bottom: 30, left: 60},
+    width = 460 - margin.left - margin.right,
+    height = 400 - margin.top - margin.bottom;
+
+// append the svg object to the body of the page
+var svg = d3.select("#my_dataviz")
+  .append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+  .append("g")
+    .attr("transform",
+          "translate(" + margin.left + "," + margin.top + ")");
+
+//Read the data
+//d3.csv("https://raw.githubusercontent.com/holtzy/data_to_viz/master/Example_dataset/3_TwoNumOrdered_comma.csv",
+data = d3.csv("https://raw.githubusercontent.com/chunzhu/cs5346_project1/main/government-overall-fiscal-position.csv",
+    (data) => {
+        return {
+            'financial_year': data.financial_year,
+            'item':data.item,
+            'amount':parseFloat(data.amount),
+                }
+
+    }, 
+    (error, rows) =>  {
+        operating_revenue_items = rows.filter((row) => row['item'] == 'Operating Revenue')
+        total_expenditures = rows.filter((row) => row['item'] == 'Total Expenditure')
+        
+        total_revenue_per_year = operating_revenue_items.reduce((acc,row) => {
+            if (acc[row['financial_year']] === undefined) {
+                acc[row['financial_year']] = 0
+            }
+            acc[row['financial_year']] += row['amount']
+            return acc
+        },{})
+        
+
+        total_expenditure_per_year = total_expenditures.reduce((acc,row) => {
+            if (acc[row['financial_year']] === undefined) {
+                acc[row['financial_year']] = 0
+            }
+            acc[row['financial_year']] += row['amount']
+            return acc
+        },{})
+        function range(start, end) {
+            return Array(end - start + 1).fill().map((_, idx) => start + idx)
+        }
+        var years = range(1997, 2022).map(year  => year.toString())
+
+        total_revenue_per_year_list = years.map(year => {
+            return {
+                'year': d3.timeParse("%Y")(year),
+                'amount':total_revenue_per_year[year]
+            }
+        })
+
+        total_expenditure_per_year_list = years.map(year => {
+            return {
+                'year': d3.timeParse("%Y")(year),
+                'amount':total_expenditure_per_year[year]
+            }
+        })
+        
+        total_expenditure_and_revenue_per_year_list = total_revenue_per_year_list.map( (data,index) => { 
+            revenue = data.amount
+            expenditure = total_expenditure_per_year_list[index].amount
+            
+            revenueAbove = revenue >= expenditure
+            return {
+            'year' : data.year,
+            'revenue' : revenue,
+            'expenditure': expenditure,
+            'revenueAbove': revenueAbove,
+            'pointType' : 'point'
+            }
+                                                                                                            
+
+        })
+        //d3.timeParse("%Y%m")("19976")
+
+        total_expenditure_and_revenue_and_intersect_per_year_list = total_expenditure_and_revenue_per_year_list.reduce( (acc,data,index) =>{
+            if (index > 0) {
+                current_data = total_expenditure_and_revenue_per_year_list[index]
+                prev_data = total_expenditure_and_revenue_per_year_list[index-1]
+                if (current_data.revenueAbove != prev_data.revenueAbove ){
+                    
+                    new_data = {
+                        'year' : d3.timeParse("%Y%m")(prev_data.year.getFullYear().toString() + 6),
+                        //'revenue' : (current_data.revenue + prev_data.revenue)/2,
+                        //'revenue' : current_data.revenue ,
+                        'revenue' : (current_data.revenue + prev_data.revenue + current_data.expenditure + prev_data.expenditure)/4,
+                        //'expenditure': (current_data.expenditure + prev_data.expenditure)/2,
+                        //'expenditure': current_data.expenditure ,
+                        'expenditure': (current_data.revenue + prev_data.revenue + current_data.expenditure + prev_data.expenditure)/4,
+                        'revenueAbove': !(current_data.revenueAbove),
+                        'pointType' : 'mid'
+                    }
+                    new_data1 = {
+                        'year' : d3.timeParse("%Y%m")(prev_data.year.getFullYear().toString() + 6),
+                        //'revenue' : (current_data.revenue + prev_data.revenue)/2,
+                        //'revenue' : current_data.revenue ,
+                        'revenue' : (current_data.revenue + prev_data.revenue + current_data.expenditure + prev_data.expenditure)/4,
+                        //'expenditure': (current_data.expenditure + prev_data.expenditure)/2,
+                        //'expenditure': current_data.expenditure,
+                        'expenditure': (current_data.revenue + prev_data.revenue + current_data.expenditure + prev_data.expenditure)/4,
+                        'revenueAbove': (current_data.revenueAbove),
+                        'pointType' : 'mid'
+                    }
+                    acc.push(new_data)
+                    acc.push(new_data1)
+                    /*
+                    new_data = {
+                        'year' : current_data.year,
+                        'revenue' : current_data.revenue,
+                        'expenditure' : current_data.expenditure,
+                        'revenueAbove': !(current_data.revenueAbove),
+                        'pointType' : 'mid'
+                    }
+                    new_data1 = {
+                        'year' : current_data.year,
+                        'revenue' : current_data.revenue,
+                        'expenditure' : current_data.expenditure,
+                        'revenueAbove': (current_data.revenueAbove),
+                        'pointType' : 'mid'
+                    }
+                    acc.push(new_data)
+                    acc.push(new_data1)
+                    */
+                }
+            }
+            acc.push(data)
+            return acc
+        },[])
+
+        total_revenue_list = Object.values(total_revenue_per_year)
+        total_expenditure_list = Object.values(total_expenditure_per_year)
+        total_values_list = total_revenue_list.concat(total_expenditure_list)
+
+        console.log(rows)
+        console.log(total_revenue_per_year)
+        console.log(total_revenue_per_year_list)
+        console.log(total_expenditure_per_year)
+        console.log(total_expenditure_per_year_list)
+        console.log(total_expenditure_and_revenue_per_year_list)
+        console.log(total_expenditure_and_revenue_and_intersect_per_year_list)
+
+        var x = d3.scaleTime()
+            //.domain(d3.extent(rows, function(d) { return d3.timeParse("%Y")(d.financial_year); }))
+            .domain(d3.extent(years, function(d) { return d3.timeParse("%Y%m")(d+1); }))
+            .range([ 0, width ]);
+        svg.append("g")
+            .attr("transform", "translate(0," + height + ")")
+            .call(d3.axisBottom(x));
+
+                // Add Y axis
+        var y = d3.scaleLinear()
+            .domain([0, d3.max(total_values_list, function(amount) { return +amount; })])
+            .range([ height, 0 ]);
+        svg.append("g")
+            .call(d3.axisLeft(y));
+
+
+        c = d3.curveBasis
+        //c = d3.curveMonotoneX
+        result = total_expenditure_and_revenue_and_intersect_per_year_list.filter(data => data.revenueAbove)
+        svg.append("path")
+        .datum(total_expenditure_and_revenue_and_intersect_per_year_list)
+        //.datum(result)
+
+        .attr("fill", "none")
+        //.attr("class", "area")
+        .attr("stroke", "steelblue")
+        .attr("stroke-width", 1.5)
+        .attr("d", d3.line()
+            .x((d) => { return x(d.year) })
+            .y((d) => { return y(d.revenue) })
+            //.defined((d) => d.revenueAbove == undefined || !(d.revenueAbove))
+            .defined((d) => d.revenueAbove)
+            //.curve(d3.curveBasis)
+            .curve(c)
+        )
+
+        svg.append("path")
+        .datum(total_expenditure_and_revenue_and_intersect_per_year_list)
+        //.datum(result)
+
+        .attr("fill", "none")
+        .attr("stroke", "green")
+        .attr("stroke-width", 1.5)
+        .attr("d", d3.line()
+            .x((d) => { return x(d.year) })
+            .y((d) => { return y(d.expenditure) })
+            //.defined((d) => d.revenueAbove == undefined || !(d.revenueAbove))
+            .defined((d) => d.revenueAbove)
+            //.curve(d3.curveBasis)
+            .curve(c)
+        )
+
+
+        result = total_expenditure_and_revenue_and_intersect_per_year_list.filter(data => !(data.revenueAbove))
+        svg.append("path")
+        .datum(total_expenditure_and_revenue_and_intersect_per_year_list)
+        //.datum(result)
+
+        .attr("fill", "none")
+        .attr("stroke", "red")
+        .attr("stroke-width", 1.5)
+        .attr("d", d3.line()
+            .x((d) => { return x(d.year) })
+            .y((d) => { return y(d.revenue) })
+            //.defined((d) => d.revenueAbove == undefined || (d.revenueAbove))
+            .defined((d) =>  !(d.revenueAbove))
+            //.curve(d3.curveBasis)
+            .curve(c)
+        )
+
+        svg.append("path")
+        .datum(total_expenditure_and_revenue_and_intersect_per_year_list)
+        //.datum(result)
+
+        .attr("fill", "none")
+        .attr("stroke", "purple")
+        .attr("stroke-width", 1.5)
+        .attr("d", d3.line()
+            .x((d) => { return x(d.year) })
+            .y((d) => { return y(d.expenditure) })
+            //.defined((d) => d.revenueAbove == undefined || (d.revenueAbove))
+            .defined((d) => !(d.revenueAbove))
+            //.curve(d3.curveBasis)
+            .curve(c)
+        )
+
+    })
+
+
+
+</script>
