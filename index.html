@@ -10,7 +10,7 @@
 <script>
 
 // set the dimensions and margins of the graph
-var margin = {top: 30, right: 150, bottom: 30, left: 60},
+var margin = {top: 30, right: 150, bottom: 50, left: 120},
     width = 580 - margin.left - margin.right,
     height = 400 - margin.top - margin.bottom;
 
@@ -265,7 +265,24 @@ data = d3.csv("https://raw.githubusercontent.com/chunzhu/cs5346_project1/main/go
             .call(d3.axisLeft(y).tickSize(-1 * width))
             .call(g => g.selectAll(".tick line")
             .attr("stroke-opacity", 0.2)
-            .attr("stroke-dasharray", "1,2"));   
+            .attr("stroke-dasharray", "1,2"));  
+        svg.append("text")
+            .attr("class", "x label")
+            .attr("text-anchor", "middle")
+            .attr("x", width/2)
+            .attr("y", height + margin.top)
+            .text("Years")
+            .style("font-size", "12px") ;      
+            
+        svg.append("text")
+            .attr("class", "y label")
+            .attr("text-anchor", "middle")
+            .attr("y", -50)
+            .attr("x",-1 * width /2)
+            .attr("dy", ".75em")
+            .attr("transform", "rotate(-90)")
+            .text("Singapore Dollars (in millions)")
+            .style("font-size", "12px") ;             
         // add title to graph
         svg.append("text")
         .attr("x", (width / 2))             
