@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <meta charset="utf-8">
-
+<body style="background-color:beige; font-family: Brush Script MT, cursive;" >
 <!-- Load d3.js -->
 <script src="https://d3js.org/d3.v4.js"></script>
 
@@ -41,7 +41,7 @@ data = d3.csv("https://raw.githubusercontent.com/chunzhu/cs5346_project1/main/go
             if (acc[row['financial_year']] === undefined) {
                 acc[row['financial_year']] = 0
             }
-            acc[row['financial_year']] += row['amount']
+            acc[row['financial_year']] += row['amount']/1000
             return acc
         },{})
         
@@ -50,7 +50,7 @@ data = d3.csv("https://raw.githubusercontent.com/chunzhu/cs5346_project1/main/go
             if (acc[row['financial_year']] === undefined) {
                 acc[row['financial_year']] = 0
             }
-            acc[row['financial_year']] += row['amount']
+            acc[row['financial_year']] += row['amount']/1000
             return acc
         },{})
         function range(start, end) {
@@ -161,7 +161,7 @@ data = d3.csv("https://raw.githubusercontent.com/chunzhu/cs5346_project1/main/go
         // expenditure area below as a mask layer
         svg.append("path")
         .datum(total_expenditure_and_revenue_and_intersect_per_year_list)
-        .attr("fill", "white")
+        .attr("fill", "beige")
         .attr("stroke-width", 0)
         .attr("d", d3.area()
             .x((d) => { return x(d.year) })
@@ -217,7 +217,7 @@ data = d3.csv("https://raw.githubusercontent.com/chunzhu/cs5346_project1/main/go
         // revenue area below as a mask layer
         svg.append("path")
         .datum(total_expenditure_and_revenue_and_intersect_per_year_list)
-        .attr("fill", "white")
+        .attr("fill", "beige")
         .attr("stroke-width", 0)
         .attr("d", d3.area()
             .x((d) => { return x(d.year) })
@@ -281,7 +281,7 @@ data = d3.csv("https://raw.githubusercontent.com/chunzhu/cs5346_project1/main/go
             .attr("x",-1 * width /2)
             .attr("dy", ".75em")
             .attr("transform", "rotate(-90)")
-            .text("Singapore Dollars (in millions)")
+            .text("Singapore Dollars (in billions)")
             .style("font-size", "12px") ;             
         // add title to graph
         svg.append("text")
@@ -336,3 +336,4 @@ data = d3.csv("https://raw.githubusercontent.com/chunzhu/cs5346_project1/main/go
     })
 
 </script>
+</body>
